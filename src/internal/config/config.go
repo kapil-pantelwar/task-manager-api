@@ -22,9 +22,9 @@ func LoadConfig() (*Config, error) {
 
 	config := &Config{}
 
-	env := "" //local
+	env := "local" //local
 
-	envConfigFileName := fmt.Sprintf(".%senv", env)
+	envConfigFileName := fmt.Sprintf(".env.%s", env)
 
 	viper.AutomaticEnv()
 

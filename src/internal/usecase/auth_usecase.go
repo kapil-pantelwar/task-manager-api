@@ -4,7 +4,11 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+
 	//"log"
+	"task-manager/src/internal/adaptors/persistance"
+	//"task-manager/src/internal/core/user"
+
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -12,15 +16,19 @@ import (
 
 
 type AuthUseCase struct {
-    repo AuthRepository
+   userRepo *persistance.UserPostgresRepo
+   sessionRepo *persistance.SessionPostgresRepo
 }
 
-func NewAuthUseCase(repo AuthRepository) *AuthUseCase {
-    return &AuthUseCase{repo: repo}
+func NewAuthUseCase(userRepo *persistance.UserPostgresRepo, sessionRepo *persistance.SessionPostgresRepo) *AuthUseCase {
+   return &AuthUseCase{
+    userRepo: userRepo,
+    sessionRepo: sessionRepo,
+   }
 }
 
 func (uc *AuthUseCase) Login(username, password string) (string, error) {
-    user, err := uc.repo.FindUserByUsername(username)
+    user, err := uc.userRepo.FindUserByUsername(username)
     if err != nil {
        
 	        return "", errors.New("invalid credentials")
@@ -35,7 +43,7 @@ func (uc *AuthUseCase) Login(username, password string) (string, error) {
         return "", err
     }
     expiresAt := time.Now().Add(1 * time.Hour).Unix()
-    err = uc.repo.SaveSession(sessionID, user.ID, expiresAt)
+    err = uc.sessionRepo.SaveSession(sessionID, user.ID, expiresAt)
     if err != nil {
         return "", err
     }
@@ -44,11 +52,11 @@ func (uc *AuthUseCase) Login(username, password string) (string, error) {
 }
 
 func (uc *AuthUseCase) Authorize(sessionID, requiredRole string) (bool, error) {
-    userID, err := uc.repo.GetSession(sessionID)
+    userID, err := uc.sessionRepo.GetSession(sessionID)
     if err != nil {
         return false, err
     }
-    role, err := uc.repo.GetUserRole(userID)
+    role, err := uc.userRepo.GetUserRole(userID)
     if err != nil {
         return false, err
     }
@@ -56,7 +64,7 @@ func (uc *AuthUseCase) Authorize(sessionID, requiredRole string) (bool, error) {
 }
 
 func (uc *AuthUseCase) Logout(sessionID string) error{
-	return uc.repo.DeleteSession(sessionID)
+	return uc.sessionRepo.DeleteSession(sessionID)
 }
 
 func generateSessionID() (string, error) {

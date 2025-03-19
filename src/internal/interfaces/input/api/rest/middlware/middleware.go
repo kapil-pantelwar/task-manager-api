@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
-	"task-manager/usecase"
+	"task-manager/src/internal/usecase"
 	"time"
 )
 

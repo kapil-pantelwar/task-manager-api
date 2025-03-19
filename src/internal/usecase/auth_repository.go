@@ -1,5 +1,5 @@
 package usecase
-import "task-manager/domain"
+import "task-manager/src/internal/core/user"
 
 
 type AuthRepository interface {

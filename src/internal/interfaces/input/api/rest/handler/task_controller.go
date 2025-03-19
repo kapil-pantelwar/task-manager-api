@@ -5,7 +5,7 @@ import (
 	//"log"
 	"net/http"
 	"strconv"
-	"task-manager/usecase"
+	"task-manager/src/internal/usecase"
 
 	"github.com/go-chi/chi/v5"
 )

@@ -1,8 +1,8 @@
-package repository
+package persistance
 
 import (
    "database/sql"
-    "task-manager/domain"
+    "task-manager/src/internal/core/task"
 )
 
 type TaskPostgresRepo struct {

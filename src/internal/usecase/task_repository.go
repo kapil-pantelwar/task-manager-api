@@ -1,6 +1,6 @@
 package usecase
 
-import "task-manager/domain"
+import "task-manager/src/internal/core/task"
 
 
 type TaskRepository interface {

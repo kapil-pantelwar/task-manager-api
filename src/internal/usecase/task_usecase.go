@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"errors"
-	"task-manager/domain"
+	"task-manager/src/internal/core/task"
 )
 
 

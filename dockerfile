@@ -9,10 +9,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy the rest of the source code
-COPY . .
+COPY src/ .
 
 # Build the Go app
-RUN go build -o task-manager main.go middleware.go
+RUN go build -o task-manager cmd/server/main.go
 
 # Expose port 8080 (our API port)
 EXPOSE 8080

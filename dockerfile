@@ -1,21 +1,27 @@
-# Use official Go image as the base
+# Use Go 1.24 Alpine as the base image
 FROM golang:1.24-alpine
 
 # Set working directory inside the container
 WORKDIR /app
 
-# Copy go.mod and go.sum, download dependencies
-COPY go.mod go.sum .secrets ./
+# Copy go.mod and go.sum for dependency caching
+COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy the rest of the source code
+# Copy the entire src/ directory
 COPY src/ ./src/
 
-# Build the Go app
+# Copy .secrets/.env.local
+COPY .secrets/.env.local .secrets/.env.local
+
+# Install protoc for proto generation
+RUN apk add --no-cache protobuf
+
+# Build the Go application
 RUN go build -o task-manager ./src/cmd/server/main.go
 
-# Expose port 8080 (our API port)
-EXPOSE 8080
+# Expose both REST and gRPC ports
+EXPOSE 8080 50051
 
-# Run the app when the container starts
+# Command to run the application
 CMD ["./task-manager"]

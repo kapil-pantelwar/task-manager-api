@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
-	pb "task-manager/src/proto"
+	pb "task-manager/src/internal/interfaces/input/grpc/task"
+	"time"
+
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 func main(){
@@ -14,16 +18,34 @@ func main(){
 	}
 	defer conn.Close()
 
-	c:= pb.NewTaskServiceClient(conn)
+	c:= pb.NewTaskServiceClient(conn)  //grpc stub
 
-	resp, err := c.CreateTask(context.Background(),&pb.CreateTaskRequest{Task: &pb.Task{Title: "gRPC Task", Description: "Test", Status: "pending"}})
+	// sessionID from REST login
+	sessionID := "U3KvqpM_ysliquhGyhMG-A==" // tbr with actual session ID from POST /login
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "session-id", sessionID)
+	
+	resp, err:= c.CreateTask(ctx, &pb.CreateTaskRequest{
+		Task: &pb.Task{Title: "gRPC Task", Description: "Test 00", Status: "pending"},
+	})
 	if err != nil {
 		log.Fatalf("CreateTask failed: %v", err)
 	}
+
 	log.Printf("Created: %v", resp.GetTask())
-	tasks, err := c.GetTasks(context.Background(),&pb.GetTasksRequest{})
+	stream, err := c.GetTasks(ctx,&pb.GetTasksRequest{})
 	if err != nil {
 		log.Fatalf("GetTasks failed: %v", err)
 	}
-	log.Printf("Tasks: %v", tasks.GetTasks())
+	for {
+		taskResp, err := stream.Recv()
+		if err == io.EOF {
+			break // End of stream
+		}
+		if err != nil {
+			log.Fatalf("Failed to receive task: %v", err)
+		}
+		log.Printf("Tasks: %v", taskResp.GetTask())
+		time.Sleep(100*time.Millisecond) //streaming delay
+	}
+	
 }

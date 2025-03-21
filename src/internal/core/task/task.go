@@ -7,5 +7,3 @@ type Task struct {
 	Status	string `json:"status"`
 }
 
-
-

@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.21.12
-// source: src/proto/task.proto
+// source: task.proto
 
-package proto
+package task
 
 import (
 	context "context"
@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	TaskService_CreateTask_FullMethodName = "/task.TaskService/CreateTask"
-	TaskService_GetTasks_FullMethodName   = "/task.TaskService/GetTasks"
+	TaskService_CreateTask_FullMethodName  = "/task.TaskService/CreateTask"
+	TaskService_GetTasks_FullMethodName    = "/task.TaskService/GetTasks"
+	TaskService_GetTaskByID_FullMethodName = "/task.TaskService/GetTaskByID"
 )
 
 // TaskServiceClient is the client API for TaskService service.
@@ -29,6 +30,7 @@ const (
 type TaskServiceClient interface {
 	CreateTask(ctx context.Context, in *CreateTaskRequest, opts ...grpc.CallOption) (*CreateTaskResponse, error)
 	GetTasks(ctx context.Context, in *GetTasksRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetTasksResponse], error)
+	GetTaskByID(ctx context.Context, in *GetTaskByIDRequest, opts ...grpc.CallOption) (*GetTaskByIDResponse, error)
 }
 
 type taskServiceClient struct {
@@ -68,12 +70,23 @@ func (c *taskServiceClient) GetTasks(ctx context.Context, in *GetTasksRequest, o
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type TaskService_GetTasksClient = grpc.ServerStreamingClient[GetTasksResponse]
 
+func (c *taskServiceClient) GetTaskByID(ctx context.Context, in *GetTaskByIDRequest, opts ...grpc.CallOption) (*GetTaskByIDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTaskByIDResponse)
+	err := c.cc.Invoke(ctx, TaskService_GetTaskByID_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TaskServiceServer is the server API for TaskService service.
 // All implementations must embed UnimplementedTaskServiceServer
 // for forward compatibility.
 type TaskServiceServer interface {
 	CreateTask(context.Context, *CreateTaskRequest) (*CreateTaskResponse, error)
 	GetTasks(*GetTasksRequest, grpc.ServerStreamingServer[GetTasksResponse]) error
+	GetTaskByID(context.Context, *GetTaskByIDRequest) (*GetTaskByIDResponse, error)
 	mustEmbedUnimplementedTaskServiceServer()
 }
 
@@ -89,6 +102,9 @@ func (UnimplementedTaskServiceServer) CreateTask(context.Context, *CreateTaskReq
 }
 func (UnimplementedTaskServiceServer) GetTasks(*GetTasksRequest, grpc.ServerStreamingServer[GetTasksResponse]) error {
 	return status.Errorf(codes.Unimplemented, "method GetTasks not implemented")
+}
+func (UnimplementedTaskServiceServer) GetTaskByID(context.Context, *GetTaskByIDRequest) (*GetTaskByIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTaskByID not implemented")
 }
 func (UnimplementedTaskServiceServer) mustEmbedUnimplementedTaskServiceServer() {}
 func (UnimplementedTaskServiceServer) testEmbeddedByValue()                     {}
@@ -140,6 +156,24 @@ func _TaskService_GetTasks_Handler(srv interface{}, stream grpc.ServerStream) er
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type TaskService_GetTasksServer = grpc.ServerStreamingServer[GetTasksResponse]
 
+func _TaskService_GetTaskByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTaskByIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TaskServiceServer).GetTaskByID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TaskService_GetTaskByID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TaskServiceServer).GetTaskByID(ctx, req.(*GetTaskByIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TaskService_ServiceDesc is the grpc.ServiceDesc for TaskService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -151,6 +185,10 @@ var TaskService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "CreateTask",
 			Handler:    _TaskService_CreateTask_Handler,
 		},
+		{
+			MethodName: "GetTaskByID",
+			Handler:    _TaskService_GetTaskByID_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -159,5 +197,5 @@ var TaskService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "src/proto/task.proto",
+	Metadata: "task.proto",
 }

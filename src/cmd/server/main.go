@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"task-manager/src/cmd/grpc"
 	"task-manager/src/internal/adaptors/persistance"
 	controller "task-manager/src/internal/interfaces/input/api/rest/handler"
 	"task-manager/src/internal/interfaces/input/api/rest/routes"
@@ -27,10 +28,16 @@ func main() {
 
 	// Start REST server 
 
-	router := routes.SetupRoutes(ctrl, authUC)
+	go func(){router := routes.SetupRoutes(ctrl, authUC)
 	log.Println("REST server starting on :8080...")
 	if err := http.ListenAndServe(":8080", router); err != nil {
 		log.Fatalf("REST server failed: %v", err)
 	}
+}()
+
+log.Println("Starting gRPC server...")
+if err := grpc.StartGRPC(taskUC,authUC); err != nil {
+	log.Fatalf("gRPC server failed: %v",err)
+}
 
 }

@@ -1,11 +1,9 @@
-package main
+package grpc
 
 import (
-	"context"
 	"log"
 	"net"
-	"task-manager/src/internal/adaptors/persistance"
-	//"task-manager/src/internal/core/session"
+	"context"
 	"task-manager/src/internal/usecase"
 	pb "task-manager/src/internal/interfaces/input/grpc/task"
 	"google.golang.org/grpc"
@@ -20,7 +18,7 @@ type taskServer struct {
 	authUC *usecase.AuthUseCase
 }
 
-func (s *taskServer) CreateTask(ctx context.Context, req *pb.CreateTaskRequest)(*pb.CreateTaskResponse, error){
+func (s *taskServer) CreateTask(ctx context.Context, req *pb.CreateTaskRequest) (*pb.CreateTaskResponse, error) {
 	if err := s.authorize(ctx); err != nil {
 		return nil, err
 	}
@@ -31,11 +29,11 @@ func (s *taskServer) CreateTask(ctx context.Context, req *pb.CreateTaskRequest)(
 	}
 	return &pb.CreateTaskResponse{
 		Task: &pb.Task{
-			Id: int32(createdTask.ID),
-			Title: createdTask.Title,
+			Id:          int32(createdTask.ID),
+			Title:       createdTask.Title,
 			Description: createdTask.Description,
-			Status: createdTask.Status,
-		}, 
+			Status:      createdTask.Status,
+		},
 	}, nil
 }
 
@@ -47,20 +45,37 @@ func (s *taskServer) GetTasks(req *pb.GetTasksRequest, stream pb.TaskService_Get
 	if err != nil {
 		return status.Error(codes.Internal, err.Error())
 	}
-	for _,t := range tasks {
+	for _, t := range tasks {
 		if err := stream.Send(&pb.GetTasksResponse{
 			Task: &pb.Task{
-				Id: int32(t.ID),
-				Title: t.Title,
+				Id:          int32(t.ID),
+				Title:       t.Title,
 				Description: t.Description,
-				Status: t.Status,
+				Status:      t.Status,
 			},
 		}); err != nil {
 			return status.Error(codes.Internal, "failed to send task")
 		}
-		
 	}
 	return nil
+}
+
+func (s *taskServer) GetTaskByID(ctx context.Context, req *pb.GetTaskByIDRequest) (*pb.GetTaskByIDResponse, error) {
+	if err := s.authorize(ctx); err != nil {
+		return nil, err
+	}
+	task, err := s.taskUC.GetByID(int(req.GetId()))
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "task not found")
+	}
+	return &pb.GetTaskByIDResponse{
+		Task: &pb.Task{
+			Id:          int32(task.ID),
+			Title:       task.Title,
+			Description: task.Description,
+			Status:      task.Status,
+		},
+	}, nil
 }
 
 func (s *taskServer) authorize(ctx context.Context) error {
@@ -72,45 +87,21 @@ func (s *taskServer) authorize(ctx context.Context) error {
 		return status.Error(codes.Unauthenticated, "session-id missing")
 	}
 	sessionID := md.Get("session-id")[0]
-	authorized, err := s.authUC.Authorize(sessionID,"user")
+	authorized, err := s.authUC.Authorize(sessionID, "user")
 	if err != nil || !authorized {
-		return status.Error(codes.Unauthenticated,"invalid or unauthorized session")
+		return status.Error(codes.Unauthenticated, "invalid or unauthorized session")
 	}
 	return nil
 }
 
-func main() {
-	//Initialize database
-	db, err := persistance.NewDatabase()
+// StartGRPC launches the gRPC server
+func StartGRPC(taskUC *usecase.TaskUseCase, authUC *usecase.AuthUseCase) error {
+	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
-		log.Fatal("Failed to initialize database:", err)
+		return err
 	}
-	defer db.Close()
-
-	if db.GetDB() == nil {
-		log.Fatal("Database connection is nil")
-	}
-
-	// Set up use cases
-	taskRepo := persistance.NewTaskPostgresRepo(db.GetDB())
-    userRepo := persistance.NewUserPostgresRepo(db.GetDB())
-    sessionRepo := persistance.NewSessionPostgresRepo(db.GetDB())
-    taskUC := usecase.NewTaskUseCase(taskRepo)
-    authUC := usecase.NewAuthUseCase(userRepo, sessionRepo)
-    if authUC == nil {
-        log.Fatal("AuthUseCase is nil")
-    }
-
-    // Start gRPC server
-    lis, err := net.Listen("tcp", ":50051")
-    if err != nil {
-        log.Fatalf("Failed to listen: %v", err)
-    }
-    grpcServer := grpc.NewServer()
-    pb.RegisterTaskServiceServer(grpcServer, &taskServer{taskUC: taskUC, authUC: authUC})
-    log.Println("gRPC server starting on :50051...")
-    if err := grpcServer.Serve(lis); err != nil {
-        log.Fatalf("gRPC server failed: %v", err)
-    }
-
+	grpcServer := grpc.NewServer()
+	pb.RegisterTaskServiceServer(grpcServer, &taskServer{taskUC: taskUC, authUC: authUC})
+	log.Println("gRPC server running on :50051...")
+	return grpcServer.Serve(lis)
 }

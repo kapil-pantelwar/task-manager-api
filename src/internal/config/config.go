@@ -22,12 +22,12 @@ func LoadConfig() (*Config, error) {
 
 	config := &Config{}
 
-	env := "local" //local
-
-	envConfigFileName := fmt.Sprintf(".env.%s", env)
-
 	viper.AutomaticEnv()
-
+	env := viper.GetString("APP_ENV");
+	if env == "" {
+		env = "local"
+	}
+	envConfigFileName := fmt.Sprintf(".env.%s", env)
 	viper.AddConfigPath("./.secrets")
 	viper.SetConfigName(envConfigFileName)
 	viper.SetConfigType("env")
